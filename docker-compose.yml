@@ -1,0 +1,274 @@
+services:
+  #########
+  # Wazuh #
+  #########
+  wazuh.manager:
+    image: dloprodz/wazuh-manager:4.9.0
+    container_name: wazuh.manager
+    hostname: wazuh.manager
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 655360
+        hard: 655360
+    ports:
+      - "1514:1514"
+      - "1515:1515"
+#      - "514:514/udp"
+      - "55000:55000"
+    env_file: .env
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - wazuh_api_configuration:/var/ossec/api/configuration
+      - wazuh_etc:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_var_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+      - filebeat_etc:/etc/filebeat
+      - filebeat_var:/var/lib/filebeat
+      - fluent-bit:/etc/fluentbit
+      - ./wazuh/config/wazuh_indexer_ssl_certs/root-ca-manager.pem:/etc/ssl/root-ca.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.manager.pem:/etc/ssl/filebeat.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key
+      - ./wazuh/config/wazuh_cluster/wazuh_manager.conf:/wazuh-config-mount/etc/ossec.conf
+#      - ./wazuh/config/wazuh_cluster/Wazuh-Rules:/tmp/Wazuh-Rules
+    restart: unless-stopped
+
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.9.0
+    container_name: wazuh.indexer
+    hostname: wazuh.indexer
+    ports:
+      - "9200:9200"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh/config/wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.key
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/admin.pem:/usr/share/wazuh-indexer/certs/admin.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem
+      - ./wazuh/config/wazuh_indexer/wazuh.indexer.yml:/usr/share/wazuh-indexer/opensearch.yml
+      - ./wazuh/config/wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml
+    restart: unless-stopped
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.9.0
+    container_name: wazuh.dashboard
+    hostname: wazuh.dashboard
+    ports:
+      - 5601:5601
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh.manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
+      - ./wazuh/config/wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem
+      - ./wazuh/config/wazuh_dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      - ./wazuh/config/wazuh_dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+      - wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config
+      - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+    depends_on:
+      - wazuh.indexer
+    restart: unless-stopped
+
+  ###########
+  # Graylog #
+  ###########
+  # MongoDB: https://hub.docker.com/_/mongo/
+  mongodb:
+    image: mongo:6.0.14
+    container_name: mongodb
+    hostname: mongodb
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    restart: unless-stopped
+
+  # Graylog: https://hub.docker.com/r/graylog/graylog/
+  graylog:
+    image: graylog/graylog:6.0.6
+    container_name: graylog
+    hostname: graylog
+    environment:
+      GRAYLOG_SERVER_JAVA_OPTS: "-Dlog4j2.formatMsgNoLookups=true -Djavax.net.ssl.trustStore=/usr/share/graylog/data/config/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+    volumes:
+      - graylog_data:/usr/share/graylog/data
+      - ./graylog/graylog.conf:/usr/share/graylog/data/config/graylog.conf
+      - ./graylog/log4j2.xml:/usr/share/graylog/data/config/log4j2.xml
+      - ./graylog/root-ca.pem:/usr/share/graylog/data/config/root-ca.pem
+      - ./graylog/GeoLite2-City.mmdb:/usr/share/graylog/data/config//GeoLite2-City.mmdb
+      - ./graylog/GeoLite2-ASN.mmdb:/usr/share/graylog/data/config/GeoLite2-ASN.mmdb
+      - ./config/network_ports.csv:/etc/graylog/network_ports.csv
+      - ./config/software_vendors.csv:/etc/graylog/software_vendors.csv
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP (Disabled for compatibility with the Wazuh Manager)
+      # - 1514:1514
+      # Syslog UDP SophosFW
+      - 514:514/udp
+      # Syslog UDP SophosFW
+      - 2514:2514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp
+    depends_on:
+      - mongodb
+      - wazuh.indexer
+    restart: unless-stopped
+
+  ###########
+  # Grafana #
+  ###########
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    hostname: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+    restart: unless-stopped
+
+  ################
+  # Velociraptor #
+  ################
+  velociraptor:
+    container_name: velociraptor
+    image: wlambert/velociraptor
+    env_file: .env
+    volumes:
+      - velociraptor:/velociraptor/:rw
+    environment:
+      - VELOX_USER=${VELOX_USER}
+      - VELOX_PASSWORD=${VELOX_PASSWORD}
+      - VELOX_ROLE=${VELOX_ROLE}
+      - VELOX_SERVER_URL=${VELOX_SERVER_URL}
+      - VELOX_FRONTEND_HOSTNAME=${VELOX_FRONTEND_HOSTNAME}
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8889:8889"
+    restart: unless-stopped
+
+  ###########
+  # CoPilot #
+  ###########
+  copilot-backend:
+    image: ghcr.io/socfortress/copilot-backend:latest
+    container_name: copilot-backend
+    env_file: .env
+    # Expose the Ports for Graylog Alerting and Docs
+    ports:
+      - "5000:5000"
+    volumes:
+      - copilot-logs:/opt/logs
+      # Mount the copilot.db file to persist the database
+      - copilot-data:/opt/copilot/backend/data
+    depends_on:
+      - copilot-mysql
+    restart: unless-stopped
+
+  copilot-frontend:
+    image: ghcr.io/socfortress/copilot-frontend:latest
+    container_name: copilot-frontend
+    env_file: .env
+    environment:
+      - SERVER_HOST=${SERVER_HOST:-localhost} # Set the domain name of your server
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+  copilot-mysql:
+    image: mysql:8.0.38-debian
+    container_name: copilot-mysql
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: copilot
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - copilot-mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  copilot-minio:
+    image: quay.io/minio/minio:RELEASE.2024-09-13T20-26-02Z
+    container_name: copilot-minio
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - copilot_minio-data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  copilot-nuclei-module:
+    image: ghcr.io/socfortress/copilot-nuclei-module:latest
+    container_name: copilot-nuclei-module
+    restart: unless-stopped
+
+volumes:
+  # Wazuh
+  wazuh_api_configuration:
+  wazuh_etc:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_var_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  filebeat_etc:
+  filebeat_var:
+  fluent-bit:
+  wazuh-indexer-data:
+  wazuh-dashboard-config:
+  wazuh-dashboard-custom:
+  # Graylog
+  mongodb_data:
+  mongodb_config:
+  graylog_data:
+  # Grafana
+  grafana-storage:
+  # Velociraptor
+  velociraptor:
+  # CoPilot
+  copilot-logs:
+  copilot-data:
+  copilot-mysql_data:
+  copilot_minio-data:
