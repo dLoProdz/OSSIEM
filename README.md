@@ -4,7 +4,7 @@ The idea behind this project is to facilitate testing of <a href="https://github
 and only intended to get people started in a lab environment. This project is licensed under GPLv3 which means you can use and modify in it any way you like, so long as you keep it under the same 
 licensing scheme. If you don't feel confortable making necessary changes for moving into production you can get in touch with us and we will help you get there.
 <br><br>
-# Pre-Deployment
+## Pre-Deployment
 <br>
 The first step is to build the Custom Wazuh Manager image using the build script provided in wazuh/custom-wazuh-manager, there you will find instructions for the build.
 <br><br>
@@ -21,7 +21,7 @@ You'll also need to follow the pre-deployment step outlined in the Graylog secti
 <br><br>
 Once that is out of the way, you are ready for Deployment.
 <br><br>
-# Deployment
+## Deployment
 <br>
 You can now safely start all containers by running:
 <br><br>
@@ -32,12 +32,12 @@ docker compose up -d
 Most of these services will need some tewaking before you are able to integrate them. I will note the project specific configurations, for the rest please follow 
 <a href="https://www.youtube.com/@taylorwalton_socfortress/videos">Taylor's Videos</a>.
 <br><br>
-# Wazuh
+### Wazuh
 <br>
 After initial deployment, the Wazuh Dashboard will present an error in the health check for the wazuh-alerts index as this has not been created yet. This error will only be fully fixed after 
 successfully integarting Graylog and the Wazuh Indexer. You can go ahead and create any necessary users/roles for the upcoming integrations to work correctly.
 <br><br>
-# Graylog
+### Graylog
 <br>
 While the container is running, you'll need to access it's console to perform some extra steps in order to add the Wazuh root CA into Graylog's Java Keystore. Run the following command 
 to spawn a shell inside the container.
@@ -61,14 +61,14 @@ keytool -importcert -keystore cacerts -storepass changeit -alias wazuh_root_ca -
 <br><br>
 You will be prompted to accept this certificate, type "yes" and enter. After this is done Graylog will be able to connect to the Wazuh Indexer.
 <br><br>
-# Post-Deployment
+## Post-Deployment
 <br>
 After you've reached this point you can take a short break to pat yourself in the back, it's all downhill from here on out.
 <br><br>
 You'll need to make sure to create any necessary users in each of the tools for the integrations to work correctly. After that has been completed, you can log into CoPilot and start 
 provisioning customers.
 <br><br>
-# Credits
+## Credits
 <br>
 Huge shoutout to <a href="https://github.com/socfortress">SOCFortress</a> and <a href="https://www.youtube.com/@taylorwalton_socfortress/featured">Taylor Walton</a> for their hard work and 
 contributions to the open source community. And of course all credits to the <a href="https://github.com/wazuh">Wazuh Team</a> for their amazing product.

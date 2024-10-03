@@ -2,7 +2,7 @@
 
 This instructions are taken from the <a href="https://github.com/wazuh/wazuh-docker">Official Wazuh Docker Repo</a>. 
 
-# Deploy Wazuh Docker in single node configuration
+## Deploy Wazuh Docker in single node configuration
 
 This deployment is defined in the `docker-compose.yml` file with one Wazuh manager containers, one Wazuh indexer containers, and one Wazuh dashboard container. It can be deployed by following these steps: 
 
