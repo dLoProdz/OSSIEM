@@ -1,6 +1,6 @@
 # Wazuh Docker Certificate Generation Script/Image
 
-This instructions are taken from the <a href="https://github.com/wazuh/wazuh-docker">Official Wazuh Docker Repo</a>. 
+This instructions are taken from the <a href="https://github.com/wazuh/wazuh-docker">Official Wazuh Docker Repo</a>. For our purposes only the first two steps are needed.
 
 ## Deploy Wazuh Docker in single node configuration
 
