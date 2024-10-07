@@ -12,7 +12,7 @@ Next you need to create, by whichever means you prefer, the required Wazuh SSL c
 script under wazuh/generate-indexer-certs.yml. Instructions for for running this container/script can be found in the <a href="https://github.com/wazuh/wazuh-docker">Official Wazuh Docker Repo</a> 
 and also under the specific subdirectory. Note: Also copy the root-ca.pem certificate into the graylog/ subdirectory as you will need it in a later step.
 
-After successful build of the Custom Wazuh Image and SSL cert generation, the next step is to modify all the configuration files provided provided under each module's subdirectory, as the ones provided 
+After successful build of the Custom Wazuh Image and SSL cert generation, the next step is to modify all the configuration files provided under each module's subdirectory, as the ones provided 
 are templates taken from each tool's documentation; and also the .env file, which comes pre-populated up to a certain point for your convenience and is located in the directory root, to suit your 
 environment and needs. Refer to each tool's documentation or follow <a href="https://www.youtube.com/@taylorwalton_socfortress/videos">Taylor Walton's Youtube Channel</a> for guidance on how to 
 configure each tool.
